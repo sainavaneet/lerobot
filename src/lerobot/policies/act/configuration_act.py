@@ -132,6 +132,10 @@ class ACTConfig(PreTrainedConfig):
     dropout: float = 0.1
     kl_weight: float = 10.0
 
+    # Task embeddings
+    task_embeddings_path: str | None = None  
+    task_embedding_dim: int = 512  
+
     # Training preset
     optimizer_lr: float = 1e-5
     optimizer_weight_decay: float = 1e-4
@@ -150,6 +154,13 @@ class ACTConfig(PreTrainedConfig):
                 "`n_action_steps` must be 1 when using temporal ensembling. This is "
                 "because the policy needs to be queried every step to compute the ensembled action."
             )
+        # Load task embedding dimension from pickle if path is provided
+        if self.task_embeddings_path:
+            import pickle
+            with open(self.task_embeddings_path, "rb") as f:
+                data = pickle.load(f)
+                self.task_embedding_dim = data["embedding_dim"]
+
         if self.n_action_steps > self.chunk_size:
             raise ValueError(
                 f"The chunk size is the upper bound for the number of action steps per model invocation. Got "

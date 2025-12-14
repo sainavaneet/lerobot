@@ -359,6 +359,17 @@ class ACT(nn.Module):
         if self.config.image_features:
             self.encoder_cam_feat_pos_embed = ACTSinusoidalPositionEmbedding2d(config.dim_model // 2)
 
+        # Task embedding projection (if task embeddings are provided)
+        if hasattr(config, 'task_embedding_dim') and config.task_embedding_dim > 0:
+            self.encoder_task_embedding_input_proj = nn.Linear(
+                config.task_embedding_dim, config.dim_model
+            )
+            n_1d_tokens += 1  # Add one more token for task embedding
+            # Recreate positional embedding with new count
+            self.encoder_1d_feature_pos_embed = nn.Embedding(n_1d_tokens, config.dim_model)
+        else:
+            self.encoder_task_embedding_input_proj = None
+
         # Transformer decoder.
         # Learnable positional embedding for the transformer's decoder (in the style of DETR object queries).
         self.decoder_pos_embed = nn.Embedding(config.chunk_size, config.dim_model)
@@ -463,6 +474,11 @@ class ACT(nn.Module):
         # Environment state token.
         if self.config.env_state_feature:
             encoder_in_tokens.append(self.encoder_env_state_input_proj(batch[OBS_ENV_STATE]))
+
+        # Add task embeddings
+        if "task_embedding" in batch and hasattr(self, 'encoder_task_embedding_input_proj') and self.encoder_task_embedding_input_proj is not None:
+            task_embed = self.encoder_task_embedding_input_proj(batch["task_embedding"])
+            encoder_in_tokens.append(task_embed)
 
         if self.config.image_features:
             # For a list of images, the H and W may vary but H*W is constant.
@@ -626,8 +642,8 @@ class ACTDecoderLayer(nn.Module):
             x: (Decoder Sequence, Batch, Channel) tensor of input tokens.
             encoder_out: (Encoder Sequence, B, C) output features from the last layer of the encoder we are
                 cross-attending with.
-            encoder_pos_embed: (ES, 1, C) positional embedding for keys (from the encoder).
-            decoder_pos_embed: (DS, 1, C) positional embedding for the queries (from the decoder).
+            decoder_pos_embed: (ES, 1, C) positional embedding for keys (from the encoder).
+            encoder_pos_embed: (DS, 1, C) Positional_embedding for the queries (from the decoder).
         Returns:
             (DS, B, C) tensor of decoder output features.
         """

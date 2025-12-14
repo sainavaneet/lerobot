@@ -29,6 +29,7 @@ from lerobot.processor import (
 )
 from lerobot.processor.converters import policy_action_to_transition, transition_to_policy_action
 from lerobot.utils.constants import POLICY_POSTPROCESSOR_DEFAULT_NAME, POLICY_PREPROCESSOR_DEFAULT_NAME
+from lerobot.policies.act.processor_act_with_task import ACTAddTaskEmbeddingsStep
 
 
 def make_act_pre_post_processors(
@@ -57,6 +58,11 @@ def make_act_pre_post_processors(
         RenameObservationsProcessorStep(rename_map={}),
         AddBatchDimensionProcessorStep(),
         DeviceProcessorStep(device=config.device),
+        *([ACTAddTaskEmbeddingsStep(
+            task_embeddings_path=config.task_embeddings_path,
+            task_key="task_index",
+            embedding_key="task_embedding",
+        )] if hasattr(config, 'task_embeddings_path') and config.task_embeddings_path else []),
         NormalizerProcessorStep(
             features={**config.input_features, **config.output_features},
             norm_map=config.normalization_mapping,
