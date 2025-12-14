@@ -498,11 +498,19 @@ def eval_main(cfg: EvalPipelineConfig):
     )
 
     policy.eval()
+    
+    # The inference device is automatically set to match the detected hardware, overriding any previous device settings from training to ensure compatibility.
+    preprocessor_overrides = {"device_processor": {"device": str(policy.config.device)}}
+    # Add task_embeddings_path override if it exists in config (needed for ACT with task embeddings)
+    if hasattr(policy.config, 'task_embeddings_path') and policy.config.task_embeddings_path:
+        preprocessor_overrides["act_add_task_embeddings"] = {
+            "task_embeddings_path": policy.config.task_embeddings_path,
+        }
+    
     preprocessor, postprocessor = make_pre_post_processors(
         policy_cfg=cfg.policy,
         pretrained_path=cfg.policy.pretrained_path,
-        # The inference device is automatically set to match the detected hardware, overriding any previous device settings from training to ensure compatibility.
-        preprocessor_overrides={"device_processor": {"device": str(policy.config.device)}},
+        preprocessor_overrides=preprocessor_overrides,
     )
     with torch.no_grad(), torch.autocast(device_type=device.type) if cfg.policy.use_amp else nullcontext():
         info = eval_policy_all(

@@ -161,8 +161,10 @@ def train(cfg: TrainPipelineConfig):
     torch.backends.cudnn.benchmark = True
     torch.backends.cuda.matmul.allow_tf32 = True
 
+    start_time = time.time()
     logging.info("Creating dataset")
     dataset = make_dataset(cfg)
+    logging.info("Dataset ready in %.1fs", time.time() - start_time)
 
     # Create environment used for evaluating checkpoints during training on simulation data.
     # On real-world data, no need to create an environment as evaluations are done outside train.py,
@@ -194,6 +196,11 @@ def train(cfg: TrainPipelineConfig):
                 "norm_map": policy.config.normalization_mapping,
             },
         }
+
+        if hasattr(cfg.policy, 'task_embeddings_path') and cfg.policy.task_embeddings_path:
+            processor_kwargs["preprocessor_overrides"]["act_add_task_embeddings"] = {
+                "task_embeddings_path": cfg.policy.task_embeddings_path,
+            }
         postprocessor_kwargs["postprocessor_overrides"] = {
             "unnormalizer_processor": {
                 "stats": dataset.meta.stats,

@@ -47,7 +47,7 @@ from lerobot.processor.converters import (
     transition_to_policy_action,
 )
 from lerobot.utils.constants import POLICY_POSTPROCESSOR_DEFAULT_NAME, POLICY_PREPROCESSOR_DEFAULT_NAME
-
+from lerobot.policies.act.processor_act_with_task import ACTAddTaskEmbeddingsStep  # noqa: F401
 
 def get_policy_class(name: str) -> type[PreTrainedPolicy]:
     """
@@ -245,8 +245,8 @@ def make_pre_post_processors(
         )
 
     elif isinstance(policy_cfg, ACTConfig):
+        from lerobot.policies.act.processor_act_with_task import ACTAddTaskEmbeddingsStep  # noqa: F401
         from lerobot.policies.act.processor_act import make_act_pre_post_processors
-
         processors = make_act_pre_post_processors(
             config=policy_cfg,
             dataset_stats=kwargs.get("dataset_stats"),
